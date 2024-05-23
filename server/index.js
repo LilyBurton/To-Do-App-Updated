@@ -22,6 +22,57 @@ socketIO.on('connection', (socket) => {
     })
 })
 
+const fetchID = () => Math.random().toString(36).substring(2, 10)
+
+let tasks = {
+    pending: {
+        title: 'pending',
+        items: [
+            {
+                id: fetchID(),
+                title: "Hoover the living room",
+                comments: []
+            },
+        ],
+    },
+
+    ongoing: {
+        title: 'ongoing',
+        items: [
+            {
+                id: fetchID(),
+                title: 'Going to get groceries',
+                comments: [
+                    {
+                        text: 'Get groceries from the recipe for potato and leek soup',
+                        id: fetchID(),
+                    },
+                ],
+            },
+        ],
+    },
+
+    completed: {
+        title: 'completed',
+        items: [
+            {
+                id: fetchID(),
+                title: 'Exercising',
+                comments: [
+                    {
+                        text: 'Focused on legs and glutes.',
+                        id: fetchID(),
+                    },
+                ],
+            },
+        ],
+    },
+};
+
+app.get("/api", (req, res) => {
+    res.json(tasks);
+});
+
 app.get('./api', (req, res) => {
     res.json({
         message: 'Hello World',

@@ -103,29 +103,32 @@ const port = 4000;
 app.use(cors());
 app.use(express.json());
 
+let tasks = {
+    // Example initial data structure
+    pending: {
+        title: "Pending",
+        items: [
+            { id: 1, title: "Task 1", comments: [] },
+            { id: 2, title: "Task 2", comments: [] },
+        ]
+    },
+    ongoing: {
+        title: "Ongoing",
+        items: [
+            { id: 3, title: "Task 3", comments: [] },
+        ]
+    },
+    done: {
+        title: "Done",
+        items: [
+            { id: 4, title: "Task 4", comments: [] },
+        ]
+    }
+};
+
 // Sample API route
 app.get('/api', (req, res) => {
-    res.json({
-        pending: {
-            title: 'Pending',
-            items: [
-                { id: '1', title: 'Walk the Dog', comments: [] },
-                { id: '2', title: 'Do Laundry', comments: [] },
-            ],
-        },
-        ongoing: {
-            title: 'Ongoing',
-            items: [
-                { id: '3', title: 'Coding', comments: [] },
-            ],
-        },
-        done: {
-            title: 'Done',
-            items: [
-                { id: '4', title: 'Exercising', comments: [] },
-            ],
-        },
-    });
+    res.json(tasks);
 });
 
 // Create HTTP server
@@ -144,7 +147,18 @@ io.on('connection', (socket) => {
 
     socket.on('taskDragged', (data) => {
         // Handle task dragged event
-        console.log('Task dragged:', data);
+        const { source, destination } = data;
+
+        const itemMoved = {
+            ...tasks[source.droppableId].items[source.index]
+        };
+        console.log('DraggedItem>>> ', itemMoved)
+
+        tasks[source.droppableId].items.splice(source.index, 1)
+
+        tasks[destination.droppableId].items.splice(destination.index, 0, itemMoved)
+
+        socket.emit("tasks", tasks)
     });
 
     socket.on('disconnect', () => {

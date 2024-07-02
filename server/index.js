@@ -13,30 +13,23 @@ let tasks = {
     pending: {
         title: "Pending",
         items: [
-            { id: '1', title: "Task 1", comments: [] },
-            { id: '2', title: "Task 2", comments: [] },
+            { id: 1, title: "Task 1", comments: [] },
+            { id: 2, title: "Task 2", comments: [] },
         ]
     },
     ongoing: {
         title: "Ongoing",
         items: [
-            { id: '3', title: "Task 3", comments: [] },
+            { id: 3, title: "Task 3", comments: [] },
         ]
     },
     done: {
         title: "Done",
         items: [
-            { id: '4', title: "Task 4", comments: [] },
+            { id: 4, title: "Task 4", comments: [] },
         ]
     }
 };
-
-const fetchID = (() => {
-    let counter = 5;
-    return () => {
-        return counter++;
-    };
-})();
 
 app.get('/api', (req, res) => {
     res.json(tasks);
@@ -55,35 +48,57 @@ io.on('connection', (socket) => {
     console.log(`${socket.id} user just connected!`);
 
     socket.on('createTask', (data) => {
-        const newTask = { id: fetchID().toString(), title: data.task, comments: [] };
+        const newTask = { id: fetchID(), title: data.task, comments: [] };
+        if (!tasks['pending']) {
+            console.error('Category pending does not exist');
+            return;
+        }
         tasks['pending'].items.push(newTask);
 
-        io.emit('tasks', tasks);
+        io.emit('tasks', tasks); // Emit to all connected clients
     });
 
     socket.on('taskDragged', (data) => {
         const { source, destination } = data;
 
-        console.log('Task dragged - Source:', source);
-        console.log('Task dragged - Destination:', destination);
+        console.log('source:', source);
+        console.log('destination:', destination);
 
-        const sourceId = source.droppableId.toLowerCase();
-        const destinationId = destination.droppableId.toLowerCase();
-
-        if (!tasks[sourceId] || !tasks[destinationId]) {
-            console.error('Invalid droppableId:', sourceId, destinationId);
+        if (!tasks[source.droppableId] || !tasks[destination.droppableId]) {
+            console.error('Invalid droppableId:', source.droppableId, destination.droppableId);
             return;
         }
 
         const itemMoved = {
-            ...tasks[sourceId].items[source.index]
+            ...tasks[source.droppableId].items[source.index]
         };
-        console.log('DraggedItem:', itemMoved);
+        console.log('DraggedItem>>> ', itemMoved);
 
-        tasks[sourceId].items.splice(source.index, 1);
-        tasks[destinationId].items.splice(destination.index, 0, itemMoved);
+        tasks[source.droppableId].items.splice(source.index, 1);
+        tasks[destination.droppableId].items.splice(destination.index, 0, itemMoved);
 
-        io.emit("tasks", tasks);
+        io.emit("tasks", tasks); // Emit to all connected clients
+    });
+
+    socket.on('addComment', (data) => {
+        const { comment, category, id, userId } = data;
+
+        if (!tasks[category]) {
+            console.error(`Category ${category} does not exist`);
+            return;
+        }
+
+        const taskItems = tasks[category].items;
+        const taskIndex = taskItems.findIndex(task => task.id === id);
+
+        if (taskIndex === -1) {
+            console.error(`Task with id ${id} not found in category ${category}`);
+            return;
+        }
+
+        tasks[category].items[taskIndex].comments.push({ text: comment, userId });
+
+        io.emit("tasks", tasks); // Emit to all connected clients
     });
 
     socket.on('disconnect', () => {
@@ -94,3 +109,8 @@ io.on('connection', (socket) => {
 server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}`);
 });
+
+// Helper function to generate a unique ID
+function fetchID() {
+    return Math.floor(Math.random() * 1000000);
+}
